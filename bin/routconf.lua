@@ -3,6 +3,7 @@ local racoon=require("racoon")
 local rconf = {}
 local address
 local port
+local t
 rconf.wan = {}
 rconf.lan ={}
 local cardlist = {}
@@ -29,9 +30,11 @@ answ = tonumber(io.read())
 if cardlist[answ] then
   cardaddr = cardlist[answ]
   if component.type(cardaddr) == "tunnel" then
+    t = "tunnel"
     port = 0
   else
 	print("Enter port: ")
+	t = "modem"
     port = io.read()
   end
   if tonumber(port) == nil then
@@ -48,6 +51,9 @@ end
 
 print("Select WAN card. Type \"N\" if you dont have WAN card.")
 rconf.wan.address, rconf.wan.port = selcard()
+if rconf.wan.address then 
+rconf.wan.type = component.type(rconf.wan.address)
+end
 
 while true do
 if i == 0 then break end
@@ -56,6 +62,7 @@ address, port = selcard()
 if address then
 rconf.lan[cardaddr:sub(1,3)] = {}
 rconf.lan[cardaddr:sub(1,3)].address = address
+rconf.lan[cardaddr:sub(1,3)].type = t
 rconf.lan[cardaddr:sub(1,3)].port = port
 else
 break

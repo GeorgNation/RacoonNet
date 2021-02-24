@@ -11,6 +11,7 @@ function configurate()
     local config = {}
     config.address = List1.items[List1.index]
     config.port = tonumber(Edit1.text)
+	config.type = component.type(config.address)
     racoon.writeconfig("racoonnet",config)
 	term.clear()
 	forms.stop()

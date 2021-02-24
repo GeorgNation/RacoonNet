@@ -1,8 +1,9 @@
-component = require("component")
-event = require("event")
-rn = require("racoonnet")
-computer = require('computer')
-racoon = require("racoon")
+local component = require("component")
+local event = require("event")
+local rn = require("racoonnet")
+local computer = require('computer')
+local racoon = require("racoon")
+local thread = require("thread")
 
 local clients = {}
 local clientscard = {}
@@ -11,6 +12,8 @@ local lan = {}
 local ip
 local err
 local config = racoon.readconfig("router")
+local lang = racoon.readlang("router")
+
 
 --//Функция отправки пакета по ip получателя
 function route(recieverip, senderip, ... )
@@ -22,13 +25,11 @@ function route(recieverip, senderip, ... )
   end
   if m then
     lan[clientscard[cl]:sub(1,3)]:directsend(clients[cl], recieverip, senderip, ...)
-	racoon.log("Отправлен пакет через LAN. IP получателя: \""..recieverip.."\". IP отправителя: \""..senderip.."\". Адресс получателя: \""..clients[cl].."\". Интерфейс: \""..clientscard[cl]:sub(1,3).."\".", 1, "router")
   else
     if wan then
 	  wan:directsend(wan.router, recieverip, senderip, ...)
-	  racoon.log("Отправлен пакет через WAN. IP получателя: \""..recieverip.."\". IP отправителя: \""..senderip.."\". Адресс получателя: \""..wan.router.."\".", 1, "router")
 	else
-	  racoon.log("Не удалось доставить пакет. IP получателя: \""..recieverip.."\".",2, "router")
+	  racoon.log(lang.deliverr..": \""..recieverip.."\".",2, "router")
     end
   end
 end
@@ -38,14 +39,14 @@ commands={}
 
 --//Пинг
 function commands.ping()
-  racoon.log("Получен ping от: "..sendIP, 1, "router")
+  racoon.log(lang.ping..": "..sendIP, 1, "router")
   route(sendIP, recIP, "pong" )
   return 
 end
 
 --//Версия
 function commands.ver()
-  racoon.log("Получен ver от: "..sendIP, 1, "router")
+  racoon.log(lang.ver..": "..sendIP, 1, "router")
   route(sendIP, recIP, "WiFi router ver 1.0" )
   return 
 end
@@ -56,30 +57,32 @@ function commands.getip()
     local adr=ip.."."..senderAdr:sub(1,3)
 	clients[adr]=senderAdr
 	clientscard[adr]=acceptedAdr
-    lan[acceptedAdr:sub(1,3)]:directsend(senderAdr, adr, acceptedAdr:sub(1,3), "setip" )
-	racoon.log("Выдан IP: "..adr, 1, "router")
+    lan[acceptedAdr:sub(1,3)]:directsend(senderAdr, adr, ip, "setip" )
+	racoon.log(lang.givenip..": "..adr, 1, "router")
     return 
   else
     return
   end
 end
-racoon.log("Запуск роутера", 1, "router")
+racoon.log(lang.launch, 1, "router")
 if not config.lan then
-  racoon.log("Не удалось загрузить конфигурацию", 4, "router")
+  racoon.log(lang.noconfig, 4, "router")
   return
 end
 
+
 --//Инициализируем WAN карту
-if config.wan.address then
-  wan, err = rn.card:init(config.wan.address,config.wan.port)
+if config.wan.type then
+  wan, err = rn.init(config.wan)
   if wan then
-    racoon.log("Инициализированна WAN карта: \""..wan.address:sub(1,3).."\". Порт: \""..wan.port.."\". Шлюз: \""..wan.routerip.."\".", 0, "router")
+    racoon.log(lang.waninit..": \""..wan.address:sub(1,3).."\". ".."\". "..lang.gateway..": \""..wan.routerip.."\".", 0, "router")
   else
-    racoon.log("Ошибка инициализации WAN карты: \""..err.."\"!", 3, "router")
+    racoon.log(lang.wanerr..": \""..err.."\"!", 3, "router")
   end
 else
-  racoon.log("Невозможно инициализировать WAN карту, не указан ID", 2, "router")
+  racoon.log(lang.nowan, 2, "router")
 end
+
 if wan then
   ip = wan.ip
 else
@@ -89,16 +92,17 @@ racoon.log("IP: \""..ip.."\"", 1, "router")
 
 --//Инициализируе LAN карты
 for saddr, obj in pairs(config.lan) do
-  lan[saddr], err = rn.card:init(obj.address,obj.port, ip, obj.address)
-  if lan[saddr] then
-    racoon.log("Инициализирована LAN карта: \""..lan[saddr].address:sub(1,3).."\". Порт: \""..lan[saddr].port.."\".", 0, "router")
+  obj.master = ip
+  lan[obj.address:sub(1,3)], err = rn.init(obj)
+  if lan[obj.address:sub(1,3)] then
+    racoon.log(lang.laninit..": \""..lan[obj.address:sub(1,3)].address:sub(1,3).."\".", 0, "router")
   else 
-    racoon.log("Ошибка инициализации LAN карты: \""..err.."\"!", 3, "router")
+    racoon.log(lang.lanerr..": \""..err.."\"!", 3, "router")
   end
 end
 
---//Основной цикл
-while true do
+function routing()
+  while true do
     packet, acceptedAdr, senderAdr, recIP, sendIP, command = rn.receiveall()
 	if recIP == ip or recIP == "" then
 	  if commands[command] then
@@ -107,4 +111,16 @@ while true do
 	else
 	  route(recIP,sendIP,table.unpack(packet,8))
 	end
+  end
+end
+
+local t = thread.create(routing)
+
+while true do
+  ev = {event.pull(_, "key_down")}
+  local key=ev[4]
+  if key==16 then --Q
+    t:kill()
+	break
+  end
 end
