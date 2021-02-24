@@ -6,6 +6,7 @@ local component = require("component")
 local buf = color.buffer()
 
 local racoon = {}
+racoon.starttime = os.date("%x_%X"):gsub("[/:]", ".")
 racoon.logmode = "both"
 
 function racoon.log(text, mtype, progname)
@@ -24,7 +25,7 @@ end
 
 function racoon.logtofile(text, progname)
   if not filesystem.exists("/etc/log/") then filesystem.makeDirectory("/etc/log/") end
-  logfile = io.open("/etc/log/"..progname.."_"..os.date("%x_%X"):gsub("[/:]", ".")..".log","a")
+  logfile = io.open("/etc/log/"..progname.."_"..racoon.starttime..".log","a")
   logfile:write(text.."\n")
   logfile:close()
 end

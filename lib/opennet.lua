@@ -12,8 +12,8 @@ end
 
 function opennet.getIP()
   local config = racoon.readconfig("racoonnet")
-  if config.address then
-    card, err = rn.card:init(config.address, config.port)
+  if config.type then
+    card, err = rn.init(config)
     if card then
       return card.ip, 0
     else
@@ -23,6 +23,7 @@ function opennet.getIP()
     return nil, "Отсутствует конфигурация RacoonNet. Запустите rnconfig."
   end
 end
+
 
 function opennet.send(recIP, ... )
   return card:send(recIP, ... )
