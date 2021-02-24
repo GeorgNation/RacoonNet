@@ -8,9 +8,6 @@ end
 function rn.receiveall(timeout)
   local ev
   ev = {event.pull(timeout,"racoonnet_message")}
-  for k,v in pairs(ev) do
-  print("!"..v)
-  end
   return ev, ev[2], ev[3], table.unpack(ev, 6)
 end
 
