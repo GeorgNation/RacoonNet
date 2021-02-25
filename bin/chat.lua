@@ -85,8 +85,7 @@ function getmess()
   end
 end
 
-thread.init()
-thread.create(getmess)
+t=thread.create(getmess)
 
 local History={}
 
@@ -103,4 +102,4 @@ while true do
 end
 on.send(server,"logout")
 os.sleep(1)
-thread.killAll()
+t:kill()
