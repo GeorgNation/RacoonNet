@@ -5,13 +5,13 @@ local fs = require("filesystem")
 local term = require("term")
 local event= require("event")
 local rn = require("racoonnet")
-local racoon = require("racoon")
+local sysutils = require("sysutils")
 local gpu  = require("component").gpu
 local text = require("text")
 local wlen = require("unicode").wlen
 
 
-local card, err = rn.init(racoon.readconfig("racoonnet"))
+local card, err = rn.init(sysutils.readconfig("racoonnet"))
 
 local wScr, hScr = component.gpu.getResolution()
 local WinW = wScr - 4
