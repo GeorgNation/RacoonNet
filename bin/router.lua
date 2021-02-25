@@ -34,7 +34,7 @@ function route(recieverip, senderip, ... )
   end
 end
 
---//Список комманд роутера
+--//Список команд роутера
 commands={}
 
 --//Пинг

@@ -6,12 +6,17 @@ local component = require("component")
 local buf = color.buffer()
 
 local racoon = {}
+racoon.init = 0
+racoon.info = 1
+racoon.warning = 2
+racoon.error = 3
+racoon.critical = 4
 racoon.starttime = os.date("%x_%X"):gsub("[/:]", ".")
 racoon.logmode = "both"
 
 function racoon.log(text, mtype, progname)
   if mtype == 4 then
-    racoon.lograw("["..os.date("%x %X").."] [CRITACAL]: "..text, progname)
+    racoon.lograw("["..os.date("%x %X").."] [CRITICAL]: "..text, progname)
   elseif mtype == 3 then
     racoon.lograw("["..os.date("%x %X").."] [ERROR]: "..text, progname)
   elseif mtype == 2 then
@@ -24,14 +29,15 @@ function racoon.log(text, mtype, progname)
 end
 
 function racoon.logtofile(text, progname)
+ if progname == nil then progname = "" end
   if not filesystem.exists("/etc/log/") then filesystem.makeDirectory("/etc/log/") end
-  logfile = io.open("/etc/log/"..progname.."_"..racoon.starttime..".log","a")
+  logfile = io.open("/etc/log/"..progname:gsub("[^%a%d_]*", "").."_"..racoon.starttime..".log","a")
   logfile:write(text.."\n")
   logfile:close()
 end
 
 function racoon.logtoscreen(text)
-if text:find("CRITACAL") then
+if text:find("CRITICAL") then
   print(buf(buf.bg_red(buf.fg_black(text)), buf.bg_black(buf.fg_white(""))))
 elseif text:find("ERROR") then
   print(buf(buf.fg_red(text), buf.bg_black(buf.fg_white(""))))
@@ -56,14 +62,17 @@ function racoon.lograw(text, progname)
 end
 
 function racoon.writeconfig(progname, config)
+  if progname == nil then return false end
   if not filesystem.exists("/etc/config/") then filesystem.makeDirectory("/etc/config/") end
-  local configfile = io.open("/etc/config/"..progname..".cfg","w")
+  local configfile = io.open("/etc/config/"..progname:gsub("[^%a%d_]*", "")..".cfg","w")
   configfile:write(serialization.serialize(config))
   configfile:close()
+  return true
 end
 
 function racoon.readconfig(progname)
-  local configfile = io.open("/etc/config/"..progname..".cfg","r")
+  if progname == nil then return nil end
+  local configfile = io.open("/etc/config/"..progname:gsub("[^%a%d_]*", "")..".cfg","r")
   if not configfile then configfile = io.open("/etc/config/"..progname..".cfg","w") end
   local file = configfile:read()
   if not file then file = "{}" end
@@ -73,9 +82,10 @@ function racoon.readconfig(progname)
 end
 
 function racoon.readlang(progname)
+  if progname == nil then return nil end
   local lang = sysconfig.lang
   if not filesystem.exists("/etc/lang/") then filesystem.makeDirectory("/etc/lang/") end
-  local langfile = io.open("/etc/lang/"..lang.."."..progname..".lang","r")
+  local langfile = io.open("/etc/lang/"..lang.."."..progname:gsub("[^%a%d_]*", "")..".lang","r")
   if not langfile then return nil end
   local lang = serialization.unserialize(langfile:read())
   if not lang then return nil end
