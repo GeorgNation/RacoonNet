@@ -2,7 +2,7 @@ local component = require("component")
 local event = require("event")
 local rn = require("racoonnet")
 local computer = require('computer')
-local racoon = require("racoon")
+local sysutils = require("sysutils")
 local thread = require("thread")
 
 local clients = {}
@@ -11,8 +11,8 @@ local wan
 local lan = {}
 local ip
 local err
-local config = racoon.readconfig("router")
-local lang = racoon.readlang("router")
+local config = sysutils.readconfig("router")
+local lang = sysutils.readlang("router")
 
 
 --//Функция отправки пакета по ip получателя
@@ -29,7 +29,7 @@ function route(recieverip, senderip, ... )
     if wan then
 	  wan:directsend(wan.router, recieverip, senderip, ...)
 	else
-	  racoon.log(lang.deliverr..": \""..recieverip.."\".",2, "router")
+	  sysutils.log(lang.deliverr..": \""..recieverip.."\".",2, "router")
     end
   end
 end
@@ -39,14 +39,14 @@ commands={}
 
 --//Пинг
 function commands.ping()
-  racoon.log(lang.ping..": "..sendIP, 1, "router")
+  sysutils.log(lang.ping..": "..sendIP, 1, "router")
   route(sendIP, recIP, "pong" )
   return 
 end
 
 --//Версия
 function commands.ver()
-  racoon.log(lang.ver..": "..sendIP, 1, "router")
+  sysutils.log(lang.ver..": "..sendIP, 1, "router")
   route(sendIP, recIP, "WiFi router ver 1.0" )
   return 
 end
@@ -58,15 +58,15 @@ function commands.getip()
 	clients[adr]=senderAdr
 	clientscard[adr]=acceptedAdr
     lan[acceptedAdr:sub(1,3)]:directsend(senderAdr, adr, ip, "setip" )
-	racoon.log(lang.givenip..": "..adr, 1, "router")
+	sysutils.log(lang.givenip..": "..adr, 1, "router")
     return 
   else
     return
   end
 end
-racoon.log(lang.launch, 1, "router")
+sysutils.log(lang.launch, 1, "router")
 if not config.lan then
-  racoon.log(lang.noconfig, 4, "router")
+  sysutils.log(lang.noconfig, 4, "router")
   return
 end
 
@@ -75,12 +75,12 @@ end
 if config.wan.type then
   wan, err = rn.init(config.wan)
   if wan then
-    racoon.log(lang.waninit..": \""..wan.address:sub(1,3).."\". ".."\". "..lang.gateway..": \""..wan.routerip.."\".", 0, "router")
+    sysutils.log(lang.waninit..": \""..wan.address:sub(1,3).."\". ".."\". "..lang.gateway..": \""..wan.routerip.."\".", 0, "router")
   else
-    racoon.log(lang.wanerr..": \""..err.."\"!", 3, "router")
+    sysutils.log(lang.wanerr..": \""..err.."\"!", 3, "router")
   end
 else
-  racoon.log(lang.nowan, 2, "router")
+  sysutils.log(lang.nowan, 2, "router")
 end
 
 if wan then
@@ -88,16 +88,16 @@ if wan then
 else
   ip = computer.address():sub(1,3)
 end
-racoon.log("IP: \""..ip.."\"", 1, "router")
+sysutils.log("IP: \""..ip.."\"", 1, "router")
 
 --//Инициализируе LAN карты
 for saddr, obj in pairs(config.lan) do
   obj.master = ip
   lan[obj.address:sub(1,3)], err = rn.init(obj)
   if lan[obj.address:sub(1,3)] then
-    racoon.log(lang.laninit..": \""..lan[obj.address:sub(1,3)].address:sub(1,3).."\".", 0, "router")
+    sysutils.log(lang.laninit..": \""..lan[obj.address:sub(1,3)].address:sub(1,3).."\".", 0, "router")
   else 
-    racoon.log(lang.lanerr..": \""..err.."\"!", 3, "router")
+    sysutils.log(lang.lanerr..": \""..err.."\"!", 3, "router")
   end
 end
 

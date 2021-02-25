@@ -1,16 +1,16 @@
 local rn = require("racoonnet")
-local racoon = require("racoon")
+local sysutils = require("sysutils")
 local component = require("component")
 local io = require("io")
 local filesystem = require("filesystem")
-local card, err = rn.init(racoon.readconfig("racoonnet"))
+local card, err = rn.init(sysutils.readconfig("racoonnet"))
 local config = {}
 config.directory = "/www/"--//Заменить на настройки
 local clientip, request, path
 local codes = {[302] = "Found", [400] = "Bad Request", [404] = "Not Found", [500] = "Internal Server Error"}
 
 if not card then
-  racoon.log("Ошибка подключения к сети: \""..err.."\"!", 4, "webserver")
+  sysutils.log("Ошибка подключения к сети: \""..err.."\"!", 4, "webserver")
   return
 end
 function senderror(code)
@@ -28,7 +28,7 @@ end
 function response()
   clientip, request = card:receive()
   if request:sub(1,3) == "GET" then
-    racoon.log("Получен запрос. IP: \""..clientip.."\".", 1, "webserver")
+    sysutils.log("Получен запрос. IP: \""..clientip.."\".", 1, "webserver")
     path = request:match("GET .* HTTP/"):sub(5,request:match("GET .* HTTP/"):len()-6):gsub("[\n ]","")
     if path == nil then senderror(400) return end
     if path:match("%.%.") then senderror(400) return end
@@ -58,7 +58,7 @@ function response()
   end
 end
 
-racoon.log("Запущен WEB сервер. IP: \""..card.ip.."\".", 0, "webserver")
+sysutils.log("Запущен WEB сервер. IP: \""..card.ip.."\".", 0, "webserver")
 while true do
   response()
 end
