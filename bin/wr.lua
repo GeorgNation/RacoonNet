@@ -26,6 +26,7 @@ local bgColour = 0x000000
 local tagColour = 0x0080FF
 local History = {}
 local object={}
+local MainForm
 
 local siteform = {}
 
@@ -216,6 +217,34 @@ function winshift(shX,shY)
   wintext()
 end
 
+function download(path)
+  SafeForm=forms.addForm()
+  SafeForm.H=9
+  SafeForm.W=34
+  SafeForm.top=(hScr - SafeForm.H)/2
+  SafeForm.left=(wScr - SafeForm.W)/2
+  SafeForm.border=1
+
+  SafeLabel1=SafeForm:addLabel(3,2,"Куда Вы хотите сохранить файл?")
+  SafeLabel1.W=30
+
+  SafePath=SafeForm:addEdit(2,3)
+  SafePath.W=32
+
+  SafeSafe=SafeForm:addButton(5,6,"Сохранить")
+  SafeSafe.H=3
+  SafeSafe.W=11
+
+  SafeCancel=SafeForm:addButton(20,6,"Отмена",download_close)
+  SafeCancel.H=3
+  SafeCancel.W=11
+  forms.run(SafeForm)
+end
+
+function download_close()
+  MainForm:setActive() 
+end
+
 function load(sPath)
   local adr,text,resp
   if sPath=='' or sPath==nil or sPath=="\n" then return end
@@ -252,7 +281,10 @@ function load(sPath)
     if card then
 	    adr, resp = card:sendrec(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
 		code = tonumber(resp:match(" %d%d%d "))
-      if code == 200 then
+	  if code == 302 then
+	    load(resp:match("Location: [%a%d%p]+"):sub(11))
+		return
+      elseif resp:match("\n\n.*") then
 	    text = resp:match("\n\n.*"):sub(3):gsub("/n",""):match("<body.*</body>")
         text=tostring(text)
         local line=1
@@ -265,9 +297,11 @@ function load(sPath)
           end
           line=line+1
         end
-	  elseif code == 302 then
-	    load(resp:match("Location: [%a%d%p]+"):sub(11))
-		return
+		  if resp:match("<title>.*</title>") then
+	        drawheader(resp:match("\n\n.*"):sub(3):gsub("/n",""):match("<title>.*</title>"):sub(8,-9))
+          else
+            drawheader()
+          end
       else
         if adr then
           lines[1]={X=1,Y=math.huge,text="Ответ от узла "..tostring(adr)}
@@ -277,7 +311,7 @@ function load(sPath)
         end
       end
     else
-      lines[1]={X=5,Y=1,text="<html>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font>"}
+      lines[1]={X=5,Y=1,text="<html><body>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font></body></html>"}
     end
   end
   wintext=codetext
@@ -286,9 +320,6 @@ function load(sPath)
     if string.find(lines[1].text,"<%s*body.*>") then wintext=htmltext end
   end
   if History[#History]~=Site then table.insert( History, Site ) end
-  if resp:match("<title>.*</title>") then
-	drawheader(resp:match("\n\n.*"):sub(3):gsub("/n",""):match("<title>.*</title>"):sub(8,-9))
-  end
   wintext()
 end
 
@@ -296,38 +327,44 @@ function refresh()
   load(Site)
 end
 
-Form1=forms.addForm()
-Form1.border=1
+MainForm=forms.addForm()
+MainForm.border=1
 
-Header=Form1:addLabel(2,2,"")
+Header=MainForm:addLabel(2,2,"")
 Header.W=wScr - 2
 Header.color=0x333399
 
-Close=Form1:addButton(wScr-4,2,"X", forms.stop)
+Close=MainForm:addButton(wScr-4,2,"X", forms.stop)
 Close.W=3
 Close.color=0xff3333
 
-AddressLine=Form1:addEdit(22,3,go)
-AddressLine.W=wScr-33
+AddressLine=MainForm:addEdit(23,3,go)
+AddressLine.W=wScr-44
 
-Refresh=Form1:addButton(11,3,"Обновить", refresh)
+Refresh=MainForm:addButton(13,3,"Обновить", refresh)
 Refresh.H=3
+Refresh.W=9
 Refresh.color = 0x6699ff
 
-Back=Form1:addButton(3,3,"Назад", back)
+Refresh=MainForm:addButton(wScr-20,3,"Загрузить", download)
+Refresh.H=3
+Refresh.W=9
+Refresh.color = 0x6699ff
+
+Back=MainForm:addButton(3,3,"Назад", back)
 Back.H=3
-Back.W=7
+Back.W=9
 Back.color = 0x6699ff
 
-Frame1=Form1:addFrame(2,6,1)
+Frame1=MainForm:addFrame(2,6,1)
 Frame1.H=hScr - 6
 Frame1.W=wScr - 2
 
-Go=Form1:addButton(wScr-10,3,"Вперёд!",go)
+Go=MainForm:addButton(wScr-10,3,"Вперёд!",go)
 Go.H=3
 Go.W=9
 Go.color = 0x33cc33
 
 drawheader()
-forms.run(Form1)
+forms.run(MainForm)
 term.clear()
