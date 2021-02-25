@@ -2,11 +2,11 @@ local event = require("event")
 local rn ={}
 
 function rn.ver(typ)
-  if typ == "major"
+  if typ == "major" then
     return 0
-  elseif typ == "minor"
+  elseif typ == "minor" then
     return 2
-  elseif typ == "text"
+  elseif typ == "text" then
     return "RacoonNet v0.2"
   else
     return "0.2"
