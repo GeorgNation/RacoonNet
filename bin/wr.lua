@@ -10,6 +10,8 @@ local gpu  = require("component").gpu
 local text = require("text")
 local wlen = require("unicode").wlen
 
+local config = sysutils.readconfig("wr")
+
 
 local card, err = rn.init(sysutils.readconfig("racoonnet"))
 
@@ -27,20 +29,37 @@ local tagColour = 0x0080FF
 local History = {}
 local object={}
 local MainForm
+if not config.downloads_dir then config.downloads_dir = "/home/downloads" end
+if not config.home then config.home = "/" end
+local download_src
 
 local siteform = {}
 
 forms.ignoreAll()
 
-function drawheader(label)
-  local head = " Wet Racoon 1.0"
+function draw_header(label)
+  local head = " Wet Racoon 1.1"
   if label then head = head.." ("..label..")"end
-  local k = wScr - 3 - head:len()
-  for i = 10, k  do
-    head = head.." "
-  end
+  Header.W=wScr -  head:len() - 5
+  head = head..string.rep(" ",Header.W)
   Header.caption = head
   Header:redraw()
+end
+
+function get_file(path)
+  if path=='' or path==nil or path=="\n" then return end
+  if path:sub(-1)=="\n" then path=path:sub(1,-2) end
+  if path:sub(1,1)=="." then
+	if Site:sub(-1) ~= "/" then
+      Site=Site:match(".*/") or Site
+	end
+	path = fs.concat(Site,path)
+  end
+  if path:sub(1,1) ~= "/" then
+    return rn_request(path)
+  elseif path:sub(1,1) == "/" then
+    return local_request(path)
+  end
 end
 
 function back()
@@ -48,10 +67,6 @@ function back()
     History[#History]=nil
     load(History[#History])
   end
-end
-
-function go()
-  load(AddressLine.text)
 end
 
 function linkcheck(...)
@@ -88,6 +103,7 @@ function winclear()
   gpu.fill(Left, Top, WinW, WinH, " ")
   cursorX, cursorY = 1, 1
 end
+
 
 tags={}
 tags['/html']=function(arg)
@@ -132,21 +148,19 @@ local function line_check(obj,x,y)
     if (x>=obj.x1 or y>obj.y1) and (x<=obj.x2 or y<obj.y2) then return true end
   end
 end
-local function bar_check(obj,x,y)
-  return y>=obj.y1 and y<=obj.y2 and x>=obj.x1 and x<=obj.x2
-end
 
-local function ref_work(obj) load(obj.ref) end
+local function ref_work(obj) if obj.target == "download" then download(obj.ref) else load(obj.ref) end end
 tags['a']=function(arg)
   if arg.href then
     table.insert(object, {check=line_check,
     x1=cursorX+Left-1-ShiftX, y1=cursorY+Top-1,
-    work=ref_work, ref = arg.href,
+    work=ref_work, ref = arg.href, target = arg.target,
     col=gpu.getForeground()})
   end
   local color=tonumber(arg.color) or tagColour
   gpu.setForeground(color)
 end
+
 tags['/a']=function()
   local ref=object[#object]
   if ref and not ref.x2 then
@@ -203,7 +217,7 @@ end
 function codetext()
   winclear()
   for i=1,WinH do
-    if lines[i+ShiftY] then gpu.set(1-ShiftX,i+Top-1,lines[i+ShiftY].text)
+    if lines[i+ShiftY] then gpu.set(Left-ShiftX,i+Top-1,lines[i+ShiftY].text)
     else break end
   end
 end
@@ -218,153 +232,239 @@ function winshift(shX,shY)
 end
 
 function download(path)
-  SafeForm=forms.addForm()
-  SafeForm.H=9
-  SafeForm.W=34
-  SafeForm.top=(hScr - SafeForm.H)/2
-  SafeForm.left=(wScr - SafeForm.W)/2
-  SafeForm.border=1
-
-  SafeLabel1=SafeForm:addLabel(3,2,"Куда Вы хотите сохранить файл?")
-  SafeLabel1.W=30
-
-  SafePath=SafeForm:addEdit(2,3)
-  SafePath.W=32
-
-  SafeSafe=SafeForm:addButton(5,6,"Сохранить")
-  SafeSafe.H=3
-  SafeSafe.W=11
-
-  SafeCancel=SafeForm:addButton(20,6,"Отмена",download_close)
-  SafeCancel.H=3
-  SafeCancel.W=11
-  forms.run(SafeForm)
+  if not path then path = Site end
+  local fname = path:match("/[^/]*")
+  SaveForm.src = path
+  SavePath.text = fs.concat(config.downloads_dir, fname)
+  forms.run(SaveForm)
 end
 
-function download_close()
-  MainForm:setActive() 
+function rn_request(site)
+  if card then
+    local host,doc=site:match('(.-)/(.*)')
+    if not host then host=site doc=nil end
+    if doc == nil then doc = "/" end
+	card:send(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
+	local adr, resp
+	while true do
+	  adr, resp = card:receive(5)
+	  if not adr then
+	    local err = "<html><body>Превышено время ожидания ответа.</body></html>"
+	    return err, err, nil , nil, site
+	  elseif adr == host then
+	    break
+	  end  
+	end
+	local code = tonumber(resp:match(" %d%d%d "))
+	local headers = {}
+	for str in string.gmatch(resp, "\n[%d%a-]*:[^:]\n") do
+      headers[str:sub(1,str:find(":")-1)] = str:sub(str:find(":")+2, -1)
+    end
+	if code == 302 then
+	  get_file(headers["Location"])
+      return
+    elseif resp:match("\n\n") then
+	  local body = resp:match("\n\n.*"):sub(3,-1)
+      return resp, body, code, headers, site
+	else
+	  return resp, nil, code, headers, site
+	end
+  else
+	local err = "<html><body>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font></body></html>"
+	return err, err, nil , nil , site
+  end
 end
 
-function load(sPath)
-  local adr,text,resp
-  if sPath=='' or sPath==nil or sPath=="\n" then return end
-  if sPath:sub(-1)=="\n" then sPath=sPath:sub(1,-2) end
+
+
+function local_request(path)
+  if fs.exists(path) then
+	if fs.isDirectory(path) then
+	  if path:sub(-1) == "/" then
+		local fcontent = "<html><body>Индекс \""..path.."\":<br><a href=\"../\">../</a><br>"
+		for name in fs.list(path)do
+		  fcontent = fcontent.."<a href=\"./"..name.."\">"..name.."</a><br>"
+		end
+		fcontent = fcontent.."</body></html>"
+		return fcontent, fcontent, nil, nil, path
+      else
+		return get_file(path.."/")
+	  end
+	else
+	  local file=io.open(path,"r")
+      if file then
+        local body = file:read("*a")
+        file:close()
+		return body, body, nil , nil , path
+      else
+		local err = "<html><body>Ошибка при открытии файла!</body></html>"
+	    return err, err, nil , nil , path
+	  end
+	end
+  else
+	local err = "<html><body>Файл не найден!</body></html>"
+	return err, err, nil , nil , path
+  end
+end
+
+function render(text)
+  text=tostring(text)
   lines={}
   ShiftX=0
   ShiftY=0
   txColour = 0xFFFFFF
   bgColour = 0x000000
-  if sPath:sub(1,1)=="." then
-	  if Site:sub(-1) ~= "/" then
-      Site=Site:match(".*/") or Site
-	  end
-	Site = fs.concat(Site,sPath)
+  if text:match("<body.*</body>") then
+    text = text:match("<body.*</body>")
+	wintext=htmltext 
   else
-    Site=sPath
+    wintext=codetext
   end
-  AddressLine.text = Site
-  AddressLine:redraw()
-  local host,doc=Site:match('(.-)/(.*)')
-  if not host then host=Site doc=nil end
-  if doc == nil then doc = "/" end
-  if host=="" then 
-    local file=io.open(Site,"r")
-    if file then
-      for line in file:lines() do
-        lines[#lines+1]={X=1,Y=math.huge,text=line}
-      end
-      file:close()
+  local line=1
+  while #text>0 do
+    local p=text:find("\n")
+    if p then
+      lines[line],text={X=1,Y=math.huge,text=text:sub(1,p-1)}, text:sub(p+1)
     else
-      lines[1]={X=5,Y=1,text="<html>Файл <font color=0xFF0000>"..Site.."</font> не найден"}
+      lines[line],text={X=1,Y=math.huge,text=text}, ""
     end
-  else
-    if card then
-	    adr, resp = card:sendrec(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
-		code = tonumber(resp:match(" %d%d%d "))
-	  if code == 302 then
-	    load(resp:match("Location: [%a%d%p]+"):sub(11))
-		return
-      elseif resp:match("\n\n.*") then
-	    text = resp:match("\n\n.*"):sub(3):gsub("/n",""):match("<body.*</body>")
-        text=tostring(text)
-        local line=1
-        while #text>0 do
-          local p=text:find("\n")
-          if p then
-            lines[line],text={X=1,Y=math.huge,text=text:sub(1,p-1)}, text:sub(p+1)
-          else
-            lines[line],text={X=1,Y=math.huge,text=text}, ""
-          end
-          line=line+1
-        end
-		  if resp:match("<title>.*</title>") then
-	        drawheader(resp:match("\n\n.*"):sub(3):gsub("/n",""):match("<title>.*</title>"):sub(8,-9))
-          else
-            drawheader()
-          end
-      else
-        if adr then
-          lines[1]={X=1,Y=math.huge,text="Ответ от узла "..tostring(adr)}
-          lines[2]={X=1,Y=math.huge,text=tostring(resp)}
-        else
-          lines[1]={X=1,Y=math.huge,text="Таймаут ожидания"}
-        end
-      end
-    else
-      lines[1]={X=5,Y=1,text="<html><body>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font></body></html>"}
-    end
+    line=line+1
   end
-  wintext=codetext
   if lines[1] then
     lines[1].Y=1
-    if string.find(lines[1].text,"<%s*body.*>") then wintext=htmltext end
   end
-  if History[#History]~=Site then table.insert( History, Site ) end
   wintext()
 end
 
-function refresh()
-  load(Site)
+function load(sPath)
+  local raw, body, code, headers, path = get_file(sPath)
+  if not raw then return end
+  Site=path
+  AddressLine.text = path
+  AddressLine:redraw()
+  render(body)
+  if body:match("<title>.*</title>") then
+	draw_header(body:match("<title>.*</title>"):sub(8,-9))
+  else
+    draw_header()
+  end
+  if History[#History]~=Site then table.insert( History, Site ) end
 end
+
+function main_form()
+  forms.activeForm():hide()
+  MainForm:setActive()
+end
+
+function save_file(save_to, download_src)
+  if download_src ~= nil and download_src ~= "" then
+    if not fs.exists(save_to:match(".*/")) then fs.makeDirectory(save_to:match(".*/")) end
+    local file = io.open(save_to, "w")
+	local body
+	_, body = get_file(download_src)
+	file:write(body)
+	file:close()
+  end
+  SaveForm:hide()
+  main_form()
+end
+
+function menu_item(self,line,item)
+  MenuForm:hide()
+  main_form()
+  if type(item)=="function" then item() end
+end
+
+SaveForm=forms.addForm()
+SaveForm.H=9
+SaveForm.W=34
+SaveForm.top=(hScr - SaveForm.H)/2
+SaveForm.left=(wScr - SaveForm.W)/2
+SaveForm.border=1
+
+SaveLabel1=SaveForm:addLabel(3,2,"Куда Вы хотите сохранить файл?")
+SaveLabel1.W=30
+
+SavePath=SaveForm:addEdit(2,3)
+SavePath.W=32
+
+SaveSafe=SaveForm:addButton(5,6,"Сохранить",function() save_file(SavePath.text, SaveForm.src) end)
+SaveSafe.H=3
+SaveSafe.W=11
+
+SaveCancel=SaveForm:addButton(20,6,"Отмена",function() SaveForm:hide() main_form() end)
+SaveCancel.H=3
+SaveCancel.W=11
+
+MenuForm=forms.addForm()
+MenuForm.W=20
+MenuForm.H=5
+MenuForm.left = 3
+MenuForm.top = 3
+
+Menu=MenuForm:addList(1,1,menu_item)
+Menu.W=MenuForm.W
+Menu.H=MenuForm.H
+
+Menu:insert("Сохранить файл", download)
+Menu:insert("Сделать домашней", function() config.home = AddressLine.text sysutils.writeconfig("wr", config) end)
+Menu:insert("Закрыть меню")
 
 MainForm=forms.addForm()
 MainForm.border=1
+MainForm.onDraw = function() load(AddressLine.text) end
 
 Header=MainForm:addLabel(2,2,"")
-Header.W=wScr - 2
-Header.color=0x333399
 
-Close=MainForm:addButton(wScr-4,2,"X", forms.stop)
+Close=MainForm:addButton(wScr-3,2,"X", forms.stop)
 Close.W=3
-Close.color=0xff3333
 
-AddressLine=MainForm:addEdit(23,3,go)
-AddressLine.W=wScr-44
+AddressLine=MainForm:addEdit(26,3,function() load(AddressLine.text) end)
+AddressLine.W=wScr-37
 
-Refresh=MainForm:addButton(13,3,"Обновить", refresh)
+Refresh=MainForm:addButton(3,3," Меню", function() Menu.index=0 Menu.shift=0 MenuForm:setActive() end)
 Refresh.H=3
-Refresh.W=9
-Refresh.color = 0x6699ff
+Refresh.W=7
 
-Refresh=MainForm:addButton(wScr-20,3,"Загрузить", download)
-Refresh.H=3
-Refresh.W=9
-Refresh.color = 0x6699ff
-
-Back=MainForm:addButton(3,3,"Назад", back)
+Back=MainForm:addButton(11,3,"Назад", back)
 Back.H=3
-Back.W=9
-Back.color = 0x6699ff
+Back.W=7
+
+Home=MainForm:addButton(19,3,"Домой", function() load(config.home) end)
+Home.H=3
+Home.W=7
 
 Frame1=MainForm:addFrame(2,6,1)
 Frame1.H=hScr - 6
 Frame1.W=wScr - 2
 
-Go=MainForm:addButton(wScr-10,3,"Вперёд!",go)
+Go=MainForm:addButton(wScr-10,3,"Вперёд!",function() load(AddressLine.text) end)
 Go.H=3
 Go.W=9
-Go.color = 0x33cc33
 
-drawheader()
+if gpu.getDepth() > 1 then
+  Go.color = 0x33cc33
+  Back.color = 0x6699ff
+  Home.color = 0x6699ff
+  Refresh.color = 0x6699ff
+  Close.color=0xff3333
+  Header.color=0x333399
+else
+  Go.color = 0x000000
+  Back.color = 0x000000
+  Refresh.color = 0x000000
+  Home.color = 0x000000
+  Home.border = 2
+  Go.border = 2
+  Back.border = 2
+  Refresh.border = 2
+  Close.color=0xffffff
+  Close.fontColor=0x000000
+  Header.color=0x000000
+end
+
+draw_header()
+local param=...
+if param then Site = param AddressLine.text = param end
 forms.run(MainForm)
 term.clear()
