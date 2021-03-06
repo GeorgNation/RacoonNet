@@ -12,7 +12,7 @@ local wlen = require("unicode").wlen
 
 local config = sysutils.readconfig("wr")
 
-local file_types = {}
+file_types = {}
 file_types["html"] = "text/html"
 
 local card, err = rn.init(sysutils.readconfig("racoonnet"))
@@ -297,8 +297,8 @@ function local_request(path)
         local body = file:read("*a")
         file:close()
 		local ftype
-		if file_types[path:gmatch("%.([%a%d]*)")] then
-		  ftype = file_types[path:gmatch("%.([%a%d]*)")]
+		if file_types[path:match("%.([%a%d]*)")] ~= nil then
+		  ftype = file_types[path:match("%.([%a%d]*)")]
 		else
 		  ftype = "text/plain"
 		end
