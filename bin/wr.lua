@@ -412,7 +412,11 @@ Menu:insert("Закрыть меню")
 
 MainForm=forms.addForm()
 MainForm.border=1
-MainForm.onDraw = function() load(AddressLine.text) end
+--MainForm.onDraw = function() load(AddressLine.text) end
+function MainForm:draw()         
+  getmetatable(self).draw(self)  
+  load(AddressLine.text)
+end
 
 Header=MainForm:addLabel(2,2,"")
 
