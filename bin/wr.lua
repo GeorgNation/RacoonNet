@@ -12,6 +12,8 @@ local wlen = require("unicode").wlen
 
 local config = sysutils.readconfig("wr")
 
+local file_types = {}
+file_types["html"] = "text/html"
 
 local card, err = rn.init(sysutils.readconfig("racoonnet"))
 
@@ -250,7 +252,7 @@ function rn_request(site)
 	  adr, resp = card:receive(5)
 	  if not adr then
 	    local err = "<html><body>Превышено время ожидания ответа.</body></html>"
-	    return err, err, nil , nil, site
+	    return err, err, nil , nil, site, "text/html"
 	  elseif adr == host then
 	    break
 	  end  
@@ -261,17 +263,16 @@ function rn_request(site)
       headers[str:sub(1,str:find(":")-1)] = str:sub(str:find(":")+2, -1)
     end
 	if code == 302 then
-	  get_file(headers["Location"])
-      return
+      return get_file(headers["Location"])
     elseif resp:match("\n\n") then
 	  local body = resp:match("\n\n.*"):sub(3,-1)
-      return resp, body, code, headers, site
+      return resp, body, code, headers, site, headers["Content-type"]
 	else
-	  return resp, nil, code, headers, site
+	  return resp, nil, code, headers, site, headers["Content-type"]
 	end
   else
 	local err = "<html><body>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font></body></html>"
-	return err, err, nil , nil , site
+	return err, err, nil , nil , site, "text/html"
   end
 end
 
@@ -286,7 +287,7 @@ function local_request(path)
 		  fcontent = fcontent.."<a href=\"./"..name.."\">"..name.."</a><br>"
 		end
 		fcontent = fcontent.."</body></html>"
-		return fcontent, fcontent, nil, nil, path
+		return fcontent, fcontent, nil, nil, path, "text/html"
       else
 		return get_file(path.."/")
 	  end
@@ -295,26 +296,32 @@ function local_request(path)
       if file then
         local body = file:read("*a")
         file:close()
-		return body, body, nil , nil , path
+		local ftype
+		if file_types[path:math(".(%a%d)") then
+		  ftype = file_types[path:math(".(%a%d)")
+		else
+		  ftype = "text/plain"
+		end
+		return body, body, nil , nil , path, ftype
       else
 		local err = "<html><body>Ошибка при открытии файла!</body></html>"
-	    return err, err, nil , nil , path
+	    return err, err, nil , nil , path, "text/html"
 	  end
 	end
   else
 	local err = "<html><body>Файл не найден!</body></html>"
-	return err, err, nil , nil , path
+	return err, err, nil , nil , path, "text/html"
   end
 end
 
-function render(text)
+function render(text, content_type)
   text=tostring(text)
   lines={}
   ShiftX=0
   ShiftY=0
   txColour = 0xFFFFFF
   bgColour = 0x000000
-  if text:match("<body.*</body>") then
+  if content_type == "text/html" then
     text = text:match("<body.*</body>")
 	wintext=htmltext 
   else
@@ -337,12 +344,12 @@ function render(text)
 end
 
 function load(sPath)
-  local raw, body, code, headers, path = get_file(sPath)
+  local raw, body, code, headers, path, content_type = get_file(sPath)
   if not raw then return end
   Site=path
   AddressLine.text = path
   AddressLine:redraw()
-  render(body)
+  render(body, content_type)
   if body:match("<title>.*</title>") then
 	draw_header(body:match("<title>.*</title>"):sub(8,-9))
   else
