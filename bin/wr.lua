@@ -323,7 +323,7 @@ function render(text, content_type)
   bgColour = 0x000000
   if content_type == "text/html" then
     text = text:match("<body.*</body>")
-	wintext=htmltext 
+	wintext=htmltext  
   else
     wintext=codetext
   end

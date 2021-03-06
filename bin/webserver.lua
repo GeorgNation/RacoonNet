@@ -3,10 +3,14 @@ local sysutils = require("sysutils")
 local component = require("component")
 local io = require("io")
 local filesystem = require("filesystem")
+local thread = require("thread")
 local card, err = rn.init(sysutils.readconfig("racoonnet"))
 local config = {}
-config.directory = "/www/"--//Заменить на настройки
+config.directory = "/www/"
 local clientip, request, path
+
+file_types = {}
+file_types["html"] = "text/html"
 local codes = {[302] = "Found", [400] = "Bad Request", [404] = "Not Found", [500] = "Internal Server Error"}
 
 if not card then
@@ -16,7 +20,12 @@ end
 function senderror(code)
   local codestr = code.." "..codes[code]
   local html = "<html><body>"..codestr.."</body></html>"
-  local str = "HTTP/1.1 "..codestr.."\nContent-type: text/html\nContent-Length:"..html:len().."\n\n"..html
+  if file_types[path:match("%.([%a%d]*)")] ~= nil then
+    ftype = file_types[path:match("%.([%a%d]*)")]
+  else
+    ftype = "text/plain"
+  end
+  local str = "HTTP/1.1 "..codestr.."\nContent-type: "..ftype.."\nContent-Length:"..html:len().."\n\n"..html
   card:send(clientip, str)
 end
 
@@ -59,6 +68,20 @@ function response()
 end
 
 sysutils.log("Запущен WEB сервер. IP: \""..card.ip.."\".", 0, "webserver")
+
+function server()
+  while true do
+    response()
+  end
+end
+
+local t = thread.create(server)
+
 while true do
-  response()
+  ev = {event.pull(_, "key_down")}
+  local key=ev[4]
+  if key==16 then --Q
+    t:kill()
+	break
+  end
 end
