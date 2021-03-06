@@ -21,12 +21,7 @@ end
 function senderror(code)
   local codestr = code.." "..codes[code]
   local html = "<html><body>"..codestr.."</body></html>"
-  if file_types[path:match("%.([%a%d]*)")] ~= nil then
-    ftype = file_types[path:match("%.([%a%d]*)")]
-  else
-    ftype = "text/plain"
-  end
-  local str = "HTTP/1.1 "..codestr.."\nContent-type: "..ftype.."\nContent-Length:"..html:len().."\n\n"..html
+  local str = "HTTP/1.1 "..codestr.."\nContent-type: text/html\nContent-Length:"..html:len().."\n\n"..html
   card:send(clientip, str)
 end
 
@@ -54,7 +49,12 @@ function response()
 		  fcontent = fcontent.."<a href=\"./"..name.."\">"..name.."</a><br>"
 		end
 		fcontent = fcontent.."</body></html>"
-	    local resp = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
+		  if file_types[path:match("%.([%a%d]*)")] ~= nil then
+            ftype = file_types[path:match("%.([%a%d]*)")]
+          else
+            ftype = "text/plain"
+          end
+	    local resp = "HTTP/1.1 200 OK\nContent-Type: "..ftype.."\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
         card:send(clientip, resp)
 		return
 	  end
