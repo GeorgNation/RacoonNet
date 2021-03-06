@@ -297,8 +297,8 @@ function local_request(path)
         local body = file:read("*a")
         file:close()
 		local ftype
-		if file_types[path:match(".([%a%d]*)")] then
-		  ftype = file_types[path:match(".([%a%d]*)")]
+		if file_types[path:match("%.([%a%d]*)")] then
+		  ftype = file_types[path:match("%.([%a%d]*)")]
 		else
 		  ftype = "text/plain"
 		end
