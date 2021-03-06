@@ -260,7 +260,7 @@ function rn_request(site)
 	local code = tonumber(resp:match(" %d%d%d "))
 	local headers = {}
 	for str in string.gmatch(resp, "\n[^:\n]*:[^:\n]*") do
-      headers[str:sub(2,str:find(":")-2)] = str:sub(str:find(":")+2)
+      headers[str:sub(2,str:find(":")-1)] = str:sub(str:find(":")+2)
     end
 	if code == 302 then
       return get_file(headers["Location"])
