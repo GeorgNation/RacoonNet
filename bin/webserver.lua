@@ -42,7 +42,7 @@ function response()
     if filesystem.isDirectory(fpath) then 
 	  if path:sub(-1) ~= "/" then redirect(filesystem.concat(card.ip, path).."/") return end
       if filesystem.exists(filesystem.concat(fpath, "index.html")) then
-	    redirect(filesystem.concat(fpath, "index.html"))
+	    redirect(card.ip..filesystem.concat(fpath, "index.html"))
 		return
 	  else
 	    local fcontent = "<html><body>Индекс \""..path.."\":<br><a href=\"../\">../</a><br>"
