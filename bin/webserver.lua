@@ -4,6 +4,7 @@ local component = require("component")
 local io = require("io")
 local filesystem = require("filesystem")
 local thread = require("thread")
+local event = require("event")
 local card, err = rn.init(sysutils.readconfig("racoonnet"))
 local config = {}
 config.directory = "/www/"
