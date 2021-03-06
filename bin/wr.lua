@@ -259,7 +259,7 @@ function rn_request(site)
 	end
 	local code = tonumber(resp:match(" %d%d%d "))
 	local headers = {}
-	for str in string.gmatch(resp, "\n[^:\n]:[^:\n]") do
+	for str in string.gmatch(resp, "\n[^:\n]*:[^:\n]*") do
       headers[str:sub(2,str:find(":")-2)] = str:sub(str:find(":")+2)
     end
 	if code == 302 then
