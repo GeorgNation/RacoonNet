@@ -50,12 +50,7 @@ function response()
 		  fcontent = fcontent.."<a href=\"./"..name.."\">"..name.."</a><br>"
 		end
 		fcontent = fcontent.."</body></html>"
-		  if file_types[path:match("%.([%a%d]*)")] ~= nil then
-            ftype = file_types[path:match("%.([%a%d]*)")]
-          else
-            ftype = "text/plain"
-          end
-	    local resp = "HTTP/1.1 200 OK\nContent-Type: "..ftype.."\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
+	    local resp = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
         card:send(clientip, resp)
 		return
 	  end
@@ -64,7 +59,12 @@ function response()
 	end
     local file = io.open(fpath, "r")
     local fcontent = file:read("*a")
-    local resp = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
+	if file_types[path:match("%.([%a%d]*)")] ~= nil then
+      ftype = file_types[path:match("%.([%a%d]*)")]
+    else
+      ftype = "text/plain"
+    end
+    local resp = "HTTP/1.1 200 OK\nContent-Type: "..ftype.."\nContent-Length: "..fcontent:len().."\n\n"..fcontent;
     card:send(clientip, resp)
   end
 end
