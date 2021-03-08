@@ -266,9 +266,9 @@ function rn_request(site)
       return get_file(headers["Location"])
     elseif resp:match("\n\n") then
 	  local body = resp:match("\n\n.*"):sub(3,-1)
-      return resp, body, code, headers, site, headers["Content-type"]
+      return resp, body, code, headers, site, headers["Content-Type"]
 	else
-	  return resp, nil, code, headers, site, headers["Content-type"]
+	  return resp, nil, code, headers, site, headers["Content-Type"]
 	end
   else
 	local err = "<html><body>Ошибка подключения к сети OpenNet: <font color=0xFF0000>"..err.."</font></body></html>"
