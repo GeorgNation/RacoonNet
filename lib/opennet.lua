@@ -1,6 +1,6 @@
 local rn=require("racoonnet")
 local component=require("component")
-local racoon=require("racoon")
+local sysutils=require("sysutils")
 
 local opennet = {}
 local card = {}
@@ -11,7 +11,7 @@ function opennet.ver()
 end
 
 function opennet.getIP()
-  local config = racoon.readconfig("racoonnet")
+  local config = sysutils.readconfig("racoonnet")
   if config.type then
     card, err = rn.init(config)
     if card then

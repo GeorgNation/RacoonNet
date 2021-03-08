@@ -1,8 +1,8 @@
 local component = require("component")
-local racoon = require("racoon")
+local sysutils = require("sysutils")
 local forms = require("forms")
 local term = require("term")
-local theme = racoon.gettheme()
+local theme = sysutils.gettheme()
 
 local cardlist = {}
 
@@ -12,7 +12,7 @@ function configurate()
     config.address = List1.items[List1.index]
     config.port = tonumber(Edit1.text)
 	config.type = component.type(config.address)
-    racoon.writeconfig("racoonnet",config)
+    sysutils.writeconfig("racoonnet",config)
 	term.clear()
 	forms.stop()
   else
