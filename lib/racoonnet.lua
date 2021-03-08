@@ -5,11 +5,11 @@ function rn.ver(typ)
   if typ == "major" then
     return 0
   elseif typ == "minor" then
-    return 2
+    return 3
   elseif typ == "text" then
-    return "RacoonNet v0.2"
+    return "RacoonNet v0.3"
   else
-    return "0.2"
+    return "0.3"
   end
 end
 
