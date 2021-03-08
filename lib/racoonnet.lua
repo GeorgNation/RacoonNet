@@ -1,8 +1,16 @@
 local event = require("event")
 local rn ={}
 
-function rn.ver()
-  return "RacoonNet v0.2"
+function rn.ver(typ)
+  if typ == "major" then
+    return 0
+  elseif typ == "minor" then
+    return 2
+  elseif typ == "text" then
+    return "RacoonNet v0.2"
+  else
+    return "0.2"
+  end
 end
 
 function rn.receiveall(timeout)

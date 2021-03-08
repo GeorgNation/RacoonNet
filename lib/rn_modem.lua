@@ -47,7 +47,12 @@ function card:init(data)
   obj.proxy = component.proxy(obj.address)
   obj.shortaddr=obj.address:sub(1,3)
   obj.proxy.open(obj.port)
-  event.listen("modem_message", function (...) local ev = {...} if ev[1] == "modem_message" and ev[2] == obj.address then event.push("racoonnet_message", table.unpack(ev,2))end end)
+  event.listen("modem_message", function (...) 
+    local ev = {...}
+	if ev[1] == "modem_message" and ev[2] == obj.address then
+	  event.push("racoonnet_message", table.unpack(ev,2))
+	end 
+  end)
   if obj.master then
     obj.ip = obj.master
 	obj.routerip = obj.master
@@ -61,7 +66,9 @@ function card:init(data)
     ev, addr, rout, _, _, locip, routip, mess = event.pull(1,"modem_message") 
     if ev then
       if addr == obj.proxy.address and mess == "setip" then
-  	    obj.ip=locip obj.router=rout obj.routerip = routip
+  	    obj.ip=locip
+		obj.router=rout
+		obj.routerip = routip
         return obj
 	  end
     else

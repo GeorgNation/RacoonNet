@@ -1,5 +1,5 @@
 local component=require("component")
-local racoon=require("racoon")
+local sysutils=require("sysutils")
 local rconf = {}
 local address
 local port
@@ -68,4 +68,4 @@ else
 break
 end
 end
-racoon.writeconfig("router", rconf)
+sysutils.writeconfig("router", rconf)
