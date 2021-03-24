@@ -16,7 +16,7 @@ end
 function rn.receiveall(timeout)
   local ev
   ev = {event.pull(timeout,"racoonnet_message")}
-  return ev, ev[2], ev[3], table.unpack(ev, 6)
+  return table.unpack(ev, 2)
 end
 
 function rn.init(data)

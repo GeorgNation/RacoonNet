@@ -103,13 +103,14 @@ end
 
 function routing()
   while true do
-    packet, acceptedAdr, senderAdr, recIP, sendIP, command = rn.receiveall()
+    ev = {rn.receiveall()}
+    acceptedAdr, senderAdr, recIP, sendIP, packet = table.unpack(ev)
 	if recIP == ip or recIP == "" then
-	  if commands[command] then
-	      commands[command](table.unpack(packet,9))
+	  if commands[packet] then
+	      commands[packet](table.unpack(ev, 6))
 	  end  
 	else
-	  route(recIP,sendIP,table.unpack(packet,8))
+	  route(recIP,sendIP,table.unpack(ev, 5))
 	end
   end
 end
