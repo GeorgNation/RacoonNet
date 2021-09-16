@@ -247,19 +247,21 @@ function download(path)
   forms.run(SaveForm)
 end
 
-function rn_request(site)
+function rn_request(site, first = true)
   if card then
     local host,doc=site:match('(.-)/(.*)')
     if not host then host=site doc=nil end
+    if first == true then
     reply = dns.lookup(host)
 	if reply == nil then
-	  rn_request(host)
+	  rn_request(host, false)
 	elseif reply == false then
 	  local err = "<html><body>DNS-сервер недоступен.</body></html>"
 	  return err, err, nil , nil, site, "text/html"
 	else
-	  rn_request(reply)
+	  rn_request(reply, false)
 	end
+     end
     if doc == nil then doc = "/" end
 	card:send(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
 	local adr, resp
