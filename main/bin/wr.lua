@@ -253,12 +253,12 @@ function rn_request(site)
     if not host then host=site doc=nil end
     reply = dns.lookup(host)
 	if reply == nil then
-	  host = host
+	  rn_request(host)
 	elseif reply == false then
 	  local err = "<html><body>DNS-сервер недоступен.</body></html>"
 	  return err, err, nil , nil, site, "text/html"
 	else
-	  host = reply
+	  rn_request(reply)
 	end
     if doc == nil then doc = "/" end
 	card:send(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
