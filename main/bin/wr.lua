@@ -251,9 +251,9 @@ function rn_request(site)
   if card then
     local host,doc=site:match('(.-)/(.*)')
     if not host then host=site doc=nil end
-    reply = dns.lookup('host')
+    reply = dns.lookup(host)
 	if reply == nil then
-	  break
+	  host = host
 	elseif reply == false then
 	  local err = "<html><body>DNS-сервер недоступен.</body></html>"
 	  return err, err, nil , nil, site, "text/html"
