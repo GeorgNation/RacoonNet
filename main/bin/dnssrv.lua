@@ -10,9 +10,9 @@ local dnsport = 42069
 -- DNS Table
 -- ['dns name'] = 'network card address'
 dnsdb = {
-  ['pdc.pix'] = '8e9.af1',
-  ['pixelsk.today'] = '8e9.c1a',
-  ['Ast.life'] = '8e9.3d9'
+  ['pdc.pix', '8e9.af1'] = '8e9.af1',
+  ['pixelsk.today', '8e9.c1a'] = '8e9.c1a',
+  ['ast.life', '8e9.3d9'] = '8e9.3d9'
 }
 
 local localAddress = ''
