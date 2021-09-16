@@ -9,6 +9,7 @@ local sysutils = require("sysutils")
 local gpu  = require("component").gpu
 local text = require("text")
 local wlen = require("unicode").wlen
+local dns = require('dns')
 
 local config = sysutils.readconfig("wr")
 
@@ -33,9 +34,14 @@ local object={}
 local MainForm
 if not config.downloads_dir then config.downloads_dir = "/home/downloads" end
 if not config.home then config.home = "/" end
+if not config.dns_ip then config.dns_ip = "34a39a43-272a-4b8b-8797-c1819654bc7b" end
+if not config.dns_port then config.dns_port = 42069 end
 local download_src
 
 local siteform = {}
+
+dns.setAddress(config.dns_ip)
+dns.setPort(config.dns_port)
 
 forms.ignoreAll()
 
@@ -245,6 +251,15 @@ function rn_request(site)
   if card then
     local host,doc=site:match('(.-)/(.*)')
     if not host then host=site doc=nil end
+    reply = dns.lookup('host')
+	if reply == nil then
+	  break
+	elseif reply == false then
+	  local err = "<html><body>DNS-сервер недоступен.</body></html>"
+	  return err, err, nil , nil, site, "text/html"
+	else
+	  host = reply
+	end
     if doc == nil then doc = "/" end
 	card:send(host,"GET "..doc.." HTTP/1.1\nHost: "..host)
 	local adr, resp
